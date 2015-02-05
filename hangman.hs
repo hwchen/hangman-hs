@@ -4,6 +4,7 @@ import Control.Monad
 import Control.Monad.State
 import Data.Char
 import Data.List.Split
+import System.Random
 
 -- data types
 
@@ -87,7 +88,39 @@ g3 = do
     guess (2,'e')
     guess (1,'n')
 
+-- should I create random generator outside of function and pass in?
+getTarget :: [String] -> IO String
+getTarget xs = do
+    let limit = length xs
+    g <- newStdGen
+    return $ xs !! (fst $ (randomR (1,limit) g))
+
+
 main :: IO()
 main = do
-    --wordlist <- liftM cleanWordList $ wordList "words.txt"
+    --initialise wordlist, target, gameState
+    wordlist <- liftM cleanWordList $ wordList "words.txt"
+    --session loop starts here. (multiple games inside)
+    --get target (from random generator)
+    tar <- getTarget wordlist
+    print $ initState tar
+    -- game loop starts here
+
+    print $ "current game is: " ++ evalState (gets currentG) (initState tar)
+    
+    -- get guess: spot and letter
+    print "Guess a spot"
+    spot <- getLine 
+    print "Guess a letter"
+    letter <- getLine
+    -- format with fmt
+    print $ "(" ++ spot ++ ", " ++ letter ++ ")"
+        --iterate game
+    runState (guess (spot, letter))
+
+    -- if state is Continue, then loop
+    -- looks like I need to either runState to a new loop each time,
+    -- or use Monad Transformers!!!
+
+    --game over
     print $ runState (g3) $ initState "one" 
