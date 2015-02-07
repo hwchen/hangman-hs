@@ -4,6 +4,7 @@ import Control.Monad
 import Control.Monad.State
 import Data.Char
 import Data.List.Split
+import Data.String.Utils
 import System.Random
 
 -- data types
@@ -16,19 +17,19 @@ import System.Random
 
 type Guess = (Int, Char) 
 
-data Answer = Correct | Wrong | Init deriving (Show)
-data Result = Won | Lost | Continue deriving (Show)
+data Answer = Correct | Wrong | Init deriving (Show, Eq)
+data Result = Won | Lost | Continue deriving (Show, Eq)
 
 data GameState = GameState { result :: Result
                            , currentG :: String
                            , target :: String
                            , countWrongG :: Int
-                           } deriving (Show)
+                           } deriving (Show, Eq)
 
 data Feedback = Feedback { answer :: Answer
                          , currentF :: String
                          , countWrongF :: Int
-                         } deriving (Show)
+                         } deriving (Show, Eq)
 
 -- Load file
 
@@ -95,6 +96,23 @@ getTarget xs = do
     g <- newStdGen
     return $ xs !! (fst $ (randomR (1,limit) g))
 
+gameLoop :: GameState -> IO()
+gameLoop state = do
+    print $ "current game is: " ++ evalState (gets currentG) state 
+    -- get guess: spot and letter
+    -- need to fix to make it less hacky
+    print "Guess a spot"
+    spot <- fmap digitToInt getChar 
+    print "Guess a letter"
+    letter <- getChar
+    -- format with fmt
+    print $ "(" ++ (show spot) ++ ", " ++ [letter] ++ ")"
+    --iterate game
+    let (feedback, newRound) = runState (guess (spot, letter)) state
+    print feedback 
+    if result newRound == Continue
+        then gameLoop newRound
+        else return ()
 
 main :: IO()
 main = do
@@ -105,20 +123,8 @@ main = do
     tar <- getTarget wordlist
     print $ initState tar
     -- game loop starts here
-
-    print $ "current game is: " ++ evalState (gets currentG) (initState tar)
-    
-    -- get guess: spot and letter
-    print "Guess a spot"
-    spot <- getLine 
-    print "Guess a letter"
-    letter <- getLine
-    -- format with fmt
-    print $ "(" ++ spot ++ ", " ++ letter ++ ")"
-        --iterate game
-    runState (guess (spot, letter))
-
-    -- if state is Continue, then loop
+    gameLoop $ initState tar
+    print $ "Game Over"
     -- looks like I need to either runState to a new loop each time,
     -- or use Monad Transformers!!!
 
