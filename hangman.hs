@@ -52,27 +52,47 @@ guess :: Guess -> State GameState Feedback
 guess (spot, c) = do
     g <- get
     if target g !! spot == c 
-        -- need another if to check for continue or Win
-        then do 
-            put GameState { result = Continue
-                          , currentG =  (replaceC (spot, c) $ currentG g)
-                          , target = target g
-                          , countWrongG = countWrongG g
-                          }
-            return Feedback { answer = Correct
-                            , currentF = (replaceC (spot, c) $ currentG g)
-                            , countWrongF = countWrongG g
+        -- if right answer
+        then do
+            let output_result = if target g == (replaceC (spot, c) $ currentG g)
+                    then Won
+                    else Continue
+            let output_current = (replaceC (spot, c) $ currentG g)
+                output_target = target g
+                output_wrong = countWrongG g
+                output_answer = Correct
+
+            put GameState { result = output_result 
+                            , currentG = output_current 
+                            , target = output_target 
+                            , countWrongG = output_wrong 
                             }
-        else do 
-        -- need to check if Continue or lost and put in a var for constructor
-            put GameState { result = Continue
-                          , currentG = currentG g
-                          , target = target g
-                          , countWrongG = (countWrongG g) + 1
-                          }
-            return Feedback { answer = Wrong
-                            , currentF = currentG g
-                            , countWrongF = (countWrongG g) + 1
+            return Feedback { answer = output_answer 
+                            , currentF = output_current 
+                            , countWrongF = output_wrong
+                            }
+        -- if wrong answer
+        else do
+            -- haha, funny imperative if statement
+            --if countWrongG g == 9 
+                --then output_result = Lose
+                --else output_result = Continue
+            let output_result = if countWrongG g == 9
+                    then Lost 
+                    else Continue
+            let output_current = currentG g 
+                output_target = target g
+                output_wrong = (countWrongG g) + 1
+                output_answer = Wrong
+
+            put GameState { result = output_result 
+                            , currentG = output_current 
+                            , target = output_target 
+                            , countWrongG = output_wrong 
+                            }
+            return Feedback { answer = output_answer 
+                            , currentF = output_current
+                            , countWrongF = output_wrong 
                             }
             
 initState :: String -> GameState
@@ -119,7 +139,6 @@ main = do
     --initialise wordlist, target, gameState
     wordlist <- liftM cleanWordList $ wordList "words.txt"
     --session loop starts here. (multiple games inside)
-    --get target (from random generator)
     tar <- getTarget wordlist
     print $ initState tar
     -- game loop starts here
@@ -127,6 +146,5 @@ main = do
     print $ "Game Over"
     -- looks like I need to either runState to a new loop each time,
     -- or use Monad Transformers!!!
-
-    --game over
-    print $ runState (g3) $ initState "one" 
+    -- next step is to validate input
+    -- then clean some code...
